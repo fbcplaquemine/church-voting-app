@@ -81,4 +81,144 @@
     .admin-section {
       margin-top: 32px;
       padding-top: 24px;
-      border-top: 1px solid #e2e8f0
+      border-top: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    .admin-section h3 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #718096;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .admin-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .admin-buttons button {
+      flex: 1;
+      padding: 12px;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    #changeMotionBtn { background: #3182ce; color: white; }
+    #resetBtn { background: #dd6b20; color: white; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Church Business Meeting</h1>
+    <div id="motionTitle">Loading current motion...</div>
+
+    <div class="buttons">
+      <button class="vote for" id="forBtn" onclick="castVote('for')">FOR</button>
+      <button class="vote against" id="againstBtn" onclick="castVote('against')">AGAINST</button>
+    </div>
+
+    <div class="counts">
+      <div class="count-for">FOR: <span id="forCount">0</span></div>
+      <div class="count-against">AGAINST: <span id="againstCount">0</span></div>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="admin-section">
+      <h3>Admin (password protected)</h3>
+      <input type="password" id="adminPass" placeholder="Enter admin password" />
+      <div id="adminControls" class="hidden">
+        <textarea id="newMotion" rows="3" placeholder="Type the next motion here..."></textarea>
+        <div class="admin-buttons">
+          <button id="changeMotionBtn" onclick="updateMotion()">Update Motion</button>
+          <button id="resetBtn" onclick="resetVotes()">Reset Votes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7sO4M3d2acWopSxaPRq36RiS8iiudTEI",
+      authDomain: "church-voting-43507.firebaseapp.com",
+      databaseURL: "https://church-voting-43507-default-rtdb.firebaseio.com",
+      projectId: "church-voting-43507",
+      storageBucket: "church-voting-43507.firebasestorage.app",
+      messagingSenderId: "521207359021",
+      appId: "1:521207359021:web:a4576aaa8039aa27f5baa4"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const ADMIN_PASSWORD = "churchvote2026"; // ← You can change this later
+
+    const VOTED_KEY = "churchVoted";
+
+    db.ref("motion").on("value", (snap) => {
+      const title = snap.val() || "No motion set yet";
+      document.getElementById("motionTitle").textContent = title;
+    });
+
+    db.ref("votes").on("value", (snap) => {
+      const data = snap.val() || { for: 0, against: 0 };
+      document.getElementById("forCount").textContent = data.for || 0;
+      document.getElementById("againstCount").textContent = data.against || 0;
+    });
+
+    if (localStorage.getItem(VOTED_KEY)) {
+      disableButtons();
+      document.getElementById("status").textContent = "You have already voted on this motion.";
+    }
+
+    function castVote(choice) {
+      if (localStorage.getItem(VOTED_KEY)) return;
+
+      db.ref("votes/" + choice).transaction((current) => (current || 0) + 1);
+
+      localStorage.setItem(VOTED_KEY, "yes");
+      disableButtons();
+      document.getElementById("status").textContent = "Thank you — your vote has been recorded.";
+    }
+
+    function disableButtons() {
+      document.getElementById("forBtn").disabled = true;
+      document.getElementById("againstBtn").disabled = true;
+    }
+
+    document.getElementById("adminPass").addEventListener("input", function () {
+      if (this.value === ADMIN_PASSWORD) {
+        document.getElementById("adminControls").classList.remove("hidden");
+      } else {
+        document.getElementById("adminControls").classList.add("hidden");
+      }
+    });
+
+    function updateMotion() {
+      const text = document.getElementById("newMotion").value.trim();
+      if (!text) return alert("Please type a motion first.");
+      db.ref("motion").set(text);
+      document.getElementById("newMotion").value = "";
+      alert("Motion updated.");
+    }
+
+    function resetVotes() {
+      if (!confirm("Reset all votes for the next motion?")) return;
+      db.ref("votes").set({ for: 0, against: 0 });
+      localStorage.removeItem(VOTED_KEY);
+      document.getElementById("forBtn").disabled = false;
+      document.getElementById("againstBtn").disabled = false;
+      document.getElementById("status").textContent = "";
+      alert("Votes reset. Members should refresh their page to vote again.");
+    }
+  </script>
+</body>
+</html>

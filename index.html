@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Church Business Meeting Vote</title>
+  <title>FBCP Online Anonymous Voting</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
@@ -29,8 +29,14 @@
     }
     h1 {
       font-size: 1.4rem;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       color: #2d3748;
+    }
+    .instructions {
+      font-size: 0.95rem;
+      color: #4a5568;
+      margin-bottom: 20px;
+      line-height: 1.4;
     }
     #motionTitle {
       font-size: 1.25rem;
@@ -133,7 +139,12 @@
 </head>
 <body>
   <div class="container">
-    <h1>Church Business Meeting</h1>
+    <h1>FBCP Online Anonymous Voting</h1>
+    <div class="instructions">
+      To Vote go to: <strong>fbcp.vercel.app</strong><br>
+      on your web browser (Safari / Chrome)
+    </div>
+
     <div id="motionTitle">Loading current motion...</div>
 
     <div class="buttons">
@@ -183,20 +194,17 @@
     let resultsVisible = false;
     let currentSession = null;
 
-    // Listen for motion title
     db.ref("motion").on("value", (snap) => {
       const title = snap.val() || "No motion set yet";
       document.getElementById("motionTitle").textContent = title;
     });
 
-    // Listen for vote counts
     db.ref("votes").on("value", (snap) => {
       const data = snap.val() || { for: 0, against: 0 };
       document.getElementById("forCount").textContent = data.for || 0;
       document.getElementById("againstCount").textContent = data.against || 0;
     });
 
-    // Listen for the current voting session
     db.ref("sessionId").on("value", (snap) => {
       currentSession = snap.val() || "default";
       checkIfAlreadyVoted();
@@ -235,7 +243,6 @@
       document.getElementById("againstBtn").disabled = false;
     }
 
-    // Admin password
     document.getElementById("adminPass").addEventListener("input", function () {
       if (this.value === ADMIN_PASSWORD) {
         document.getElementById("adminControls").classList.remove("hidden");
@@ -262,17 +269,12 @@
       const text = document.getElementById("newMotion").value.trim();
       if (!text) return alert("Please type a motion first.");
 
-      // Update the motion
       db.ref("motion").set(text);
-
-      // Reset the vote counts
       db.ref("votes").set({ for: 0, against: 0 });
 
-      // Create a new session so phones can vote again
       const newSession = Date.now().toString();
       db.ref("sessionId").set(newSession);
 
-      // Hide results
       resultsVisible = false;
       document.getElementById("results").classList.remove("visible");
       document.getElementById("showResultsBtn").textContent = "Show Results";

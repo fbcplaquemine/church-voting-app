@@ -33,22 +33,22 @@
       color: #2d3748;
     }
     #motionTitle {
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       font-weight: 600;
-      margin: 16px 0 28px;
+      margin: 16px 0 32px;
       line-height: 1.4;
       color: #1a365d;
-      min-height: 60px;
+      min-height: 70px;
     }
     .buttons {
       display: flex;
       gap: 16px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
     button.vote {
       flex: 1;
-      padding: 22px 12px;
-      font-size: 1.4rem;
+      padding: 24px 12px;
+      font-size: 1.5rem;
       font-weight: 700;
       border: none;
       border-radius: 12px;
@@ -60,32 +60,24 @@
     button.for { background: #38a169; }
     button.against { background: #e53e3e; }
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.45;
       cursor: not-allowed;
     }
-    .counts {
-      display: flex;
-      justify-content: space-around;
-      margin-bottom: 20px;
-      font-size: 1.8rem;
-      font-weight: 700;
-    }
-    .count-for { color: #38a169; }
-    .count-against { color: #e53e3e; }
     #status {
-      font-size: 1.1rem;
-      margin-bottom: 24px;
-      min-height: 28px;
-      color: #4a5568;
+      font-size: 1.15rem;
+      margin-bottom: 20px;
+      min-height: 30px;
+      color: #2d3748;
+      font-weight: 500;
     }
     .admin-section {
-      margin-top: 32px;
+      margin-top: 36px;
       padding-top: 24px;
       border-top: 1px solid #e2e8f0;
       text-align: left;
     }
     .admin-section h3 {
-      font-size: 1rem;
+      font-size: 0.95rem;
       margin-bottom: 12px;
       color: #718096;
     }
@@ -100,19 +92,28 @@
     .admin-buttons {
       display: flex;
       gap: 10px;
+      margin-top: 8px;
     }
     .admin-buttons button {
       flex: 1;
-      padding: 12px;
+      padding: 13px;
       font-size: 0.95rem;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
+      color: white;
     }
-    #changeMotionBtn { background: #3182ce; color: white; }
-    #resetBtn { background: #dd6b20; color: white; }
+    #changeMotionBtn { background: #3182ce; }
+    #resetBtn { background: #dd6b20; }
     .hidden { display: none; }
+    .admin-counts {
+      display: flex;
+      justify-content: space-around;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 16px 0;
+    }
   </style>
 </head>
 <body>
@@ -120,113 +121,6 @@
     <h1>Church Business Meeting</h1>
     <div id="motionTitle">Loading current motion...</div>
 
-    <div class="buttons">
+    <div class="buttons" id="voteButtons">
       <button class="vote for" id="forBtn" onclick="castVote('for')">FOR</button>
-      <button class="vote against" id="againstBtn" onclick="castVote('against')">AGAINST</button>
-    </div>
-
-    <div class="counts">
-      <div class="count-for">FOR: <span id="forCount">0</span></div>
-      <div class="count-against">AGAINST: <span id="againstCount">0</span></div>
-    </div>
-
-    <div id="status"></div>
-
-    <!-- Admin section -->
-    <div class="admin-section">
-      <h3>Admin (password protected)</h3>
-      <input type="password" id="adminPass" placeholder="Enter admin password" />
-      <div id="adminControls" class="hidden">
-        <textarea id="newMotion" rows="3" placeholder="Type the next motion here..."></textarea>
-        <div class="admin-buttons">
-          <button id="changeMotionBtn" onclick="updateMotion()">Update Motion</button>
-          <button id="resetBtn" onclick="resetVotes()">Reset Votes</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // ========== PASTE YOUR FIREBASE CONFIG HERE ==========
-const firebaseConfig = {
-  apiKey: "AIzaSyB7sO4M3d2acWopSxaPRq36RiS8iiudTEI",
-  authDomain: "church-voting-43507.firebaseapp.com",
-  databaseURL: "https://church-voting-43507-default-rtdb.firebaseio.com",
-  projectId: "church-voting-43507",
-  storageBucket: "church-voting-43507.firebasestorage.app",
-  messagingSenderId: "521207359021",
-  appId: "1:521207359021:web:a4576aaa8039aa27f5baa4"
-};
-    // ======================================================
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    const ADMIN_PASSWORD = "churchvote2026"; // Change this to whatever you want
-
-    // Prevent double voting on the same phone
-    const VOTED_KEY = "churchVoted";
-
-    // Live listeners
-    db.ref("motion").on("value", (snap) => {
-      const title = snap.val() || "No motion set yet";
-      document.getElementById("motionTitle").textContent = title;
-    });
-
-    db.ref("votes").on("value", (snap) => {
-      const data = snap.val() || { for: 0, against: 0 };
-      document.getElementById("forCount").textContent = data.for || 0;
-      document.getElementById("againstCount").textContent = data.against || 0;
-    });
-
-    // Check if this phone already voted
-    if (localStorage.getItem(VOTED_KEY)) {
-      disableButtons();
-      document.getElementById("status").textContent = "You have already voted on this motion.";
-    }
-
-    function castVote(choice) {
-      if (localStorage.getItem(VOTED_KEY)) return;
-
-      const ref = db.ref("votes/" + choice);
-      ref.transaction((current) => (current || 0) + 1);
-
-      localStorage.setItem(VOTED_KEY, "yes");
-      disableButtons();
-      document.getElementById("status").textContent = "Thank you — your vote has been recorded.";
-    }
-
-    function disableButtons() {
-      document.getElementById("forBtn").disabled = true;
-      document.getElementById("againstBtn").disabled = true;
-    }
-
-    // Admin password check
-    document.getElementById("adminPass").addEventListener("input", function () {
-      if (this.value === ADMIN_PASSWORD) {
-        document.getElementById("adminControls").classList.remove("hidden");
-      } else {
-        document.getElementById("adminControls").classList.add("hidden");
-      }
-    });
-
-    function updateMotion() {
-      const text = document.getElementById("newMotion").value.trim();
-      if (!text) return alert("Please type a motion first.");
-      db.ref("motion").set(text);
-      document.getElementById("newMotion").value = "";
-      alert("Motion updated.");
-    }
-
-    function resetVotes() {
-      if (!confirm("Reset all votes for the next motion?")) return;
-      db.ref("votes").set({ for: 0, against: 0 });
-      localStorage.removeItem(VOTED_KEY); // only clears on THIS device
-      document.getElementById("forBtn").disabled = false;
-      document.getElementById("againstBtn").disabled = false;
-      document.getElementById("status").textContent = "";
-      alert("Votes reset. Members will need to refresh their phones to vote again.");
-    }
-  </script>
-</body>
-</html>
+     

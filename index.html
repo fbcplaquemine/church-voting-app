@@ -43,7 +43,7 @@
     .buttons {
       display: flex;
       gap: 16px;
-      margin-bottom: 28px;
+      margin-bottom: 20px;
     }
     button.vote {
       flex: 1;
@@ -62,6 +62,17 @@
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+    .refresh-btn {
+      background: #4a5568;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 24px;
     }
     .counts {
       display: none;
@@ -131,6 +142,9 @@
       <button class="vote against" id="againstBtn" onclick="castVote('against')">AGAINST</button>
     </div>
 
+    <!-- Refresh button visible to everyone -->
+    <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+
     <div class="counts" id="results">
       <div class="count-for">FOR: <span id="forCount">0</span></div>
       <div class="count-against">AGAINST: <span id="againstCount">0</span></div>
@@ -197,11 +211,9 @@
       const votedSession = localStorage.getItem("votedSession");
 
       if (votedSession === currentSession) {
-        // This phone already voted in the current session
         disableButtons();
         document.getElementById("status").textContent = "You have already voted on this motion.";
       } else {
-        // New session – allow voting
         enableButtons();
         document.getElementById("status").textContent = "";
       }
@@ -274,7 +286,7 @@
       document.getElementById("results").classList.remove("visible");
       document.getElementById("showResultsBtn").textContent = "Show Results";
 
-      alert("Votes reset.\n\nMembers just need to refresh their page to vote on the new motion.");
+      alert("Votes reset.\n\nMembers can now press the Refresh button to vote on the new motion.");
     }
   </script>
 </body>

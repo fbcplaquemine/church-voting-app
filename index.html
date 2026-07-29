@@ -64,7 +64,7 @@
       cursor: not-allowed;
     }
     .counts {
-      display: none; /* Hidden by default */
+      display: none;
       justify-content: space-around;
       margin-bottom: 20px;
       font-size: 1.8rem;
@@ -131,7 +131,6 @@
       <button class="vote against" id="againstBtn" onclick="castVote('against')">AGAINST</button>
     </div>
 
-    <!-- Results are hidden until admin clicks "Show Results" -->
     <div class="counts" id="results">
       <div class="count-for">FOR: <span id="forCount">0</span></div>
       <div class="count-against">AGAINST: <span id="againstCount">0</span></div>
@@ -139,7 +138,6 @@
 
     <div id="status"></div>
 
-    <!-- Admin section -->
     <div class="admin-section">
       <h3>Admin (password protected)</h3>
       <input type="password" id="adminPass" placeholder="Enter admin password" />
@@ -172,35 +170,50 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const ADMIN_PASSWORD = "churchvote2026"; // Change this if you want
-    const VOTED_KEY = "churchVoted";
-
+    const ADMIN_PASSWORD = "churchvote2026";
     let resultsVisible = false;
+    let currentSession = null;
 
-    // Live listeners
+    // Listen for motion title
     db.ref("motion").on("value", (snap) => {
       const title = snap.val() || "No motion set yet";
       document.getElementById("motionTitle").textContent = title;
     });
 
+    // Listen for vote counts
     db.ref("votes").on("value", (snap) => {
       const data = snap.val() || { for: 0, against: 0 };
       document.getElementById("forCount").textContent = data.for || 0;
       document.getElementById("againstCount").textContent = data.against || 0;
     });
 
-    // Check if this phone already voted
-    if (localStorage.getItem(VOTED_KEY)) {
-      disableButtons();
-      document.getElementById("status").textContent = "You have already voted on this motion.";
+    // Listen for the current voting session
+    db.ref("sessionId").on("value", (snap) => {
+      currentSession = snap.val() || "default";
+      checkIfAlreadyVoted();
+    });
+
+    function checkIfAlreadyVoted() {
+      const votedSession = localStorage.getItem("votedSession");
+
+      if (votedSession === currentSession) {
+        // This phone already voted in the current session
+        disableButtons();
+        document.getElementById("status").textContent = "You have already voted on this motion.";
+      } else {
+        // New session – allow voting
+        enableButtons();
+        document.getElementById("status").textContent = "";
+      }
     }
 
     function castVote(choice) {
-      if (localStorage.getItem(VOTED_KEY)) return;
+      const votedSession = localStorage.getItem("votedSession");
+      if (votedSession === currentSession) return;
 
       db.ref("votes/" + choice).transaction((current) => (current || 0) + 1);
 
-      localStorage.setItem(VOTED_KEY, "yes");
+      localStorage.setItem("votedSession", currentSession);
       disableButtons();
       document.getElementById("status").textContent = "Thank you — your vote has been recorded.";
     }
@@ -210,7 +223,12 @@
       document.getElementById("againstBtn").disabled = true;
     }
 
-    // Admin password check
+    function enableButtons() {
+      document.getElementById("forBtn").disabled = false;
+      document.getElementById("againstBtn").disabled = false;
+    }
+
+    // Admin password
     document.getElementById("adminPass").addEventListener("input", function () {
       if (this.value === ADMIN_PASSWORD) {
         document.getElementById("adminControls").classList.remove("hidden");
@@ -243,18 +261,20 @@
 
     function resetVotes() {
       if (!confirm("Reset all votes for the next motion?")) return;
+
+      // Reset the counts
       db.ref("votes").set({ for: 0, against: 0 });
-      localStorage.removeItem(VOTED_KEY);
-      document.getElementById("forBtn").disabled = false;
-      document.getElementById("againstBtn").disabled = false;
-      document.getElementById("status").textContent = "";
-      
-      // Also hide results when resetting
+
+      // Create a brand new session ID so phones allow voting again
+      const newSession = Date.now().toString();
+      db.ref("sessionId").set(newSession);
+
+      // Hide results
       resultsVisible = false;
       document.getElementById("results").classList.remove("visible");
       document.getElementById("showResultsBtn").textContent = "Show Results";
-      
-      alert("Votes reset. Members should refresh their page to vote on the new motion.");
+
+      alert("Votes reset.\n\nMembers just need to refresh their page to vote on the new motion.");
     }
   </script>
 </body>

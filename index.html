@@ -128,7 +128,6 @@
     }
     #showResultsBtn { background: #805ad5; }
     #changeMotionBtn { background: #3182ce; }
-    #resetBtn { background: #dd6b20; }
     .hidden { display: none; }
   </style>
 </head>
@@ -142,7 +141,6 @@
       <button class="vote against" id="againstBtn" onclick="castVote('against')">AGAINST</button>
     </div>
 
-    <!-- Refresh button visible to everyone -->
     <button class="refresh-btn" onclick="location.reload()">Refresh</button>
 
     <div class="counts" id="results">
@@ -161,25 +159,22 @@
         
         <textarea id="newMotion" rows="3" placeholder="Type the next motion here..."></textarea>
         <div class="admin-buttons">
-          <button id="changeMotionBtn" onclick="updateMotion()">Update Motion</button>
-          <button id="resetBtn" onclick="resetVotes()">Reset Votes</button>
+          <button id="changeMotionBtn" onclick="updateMotion()">Update Motion & Reset Votes</button>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // ========== PASTE YOUR FIREBASE CONFIG HERE ==========
-const firebaseConfig = {
-  apiKey: "AIzaSyB7sO4M3d2acWopSxaPRq36RiS8iiudTEI",
-  authDomain: "church-voting-43507.firebaseapp.com",
-  databaseURL: "https://church-voting-43507-default-rtdb.firebaseio.com",
-  projectId: "church-voting-43507",
-  storageBucket: "church-voting-43507.firebasestorage.app",
-  messagingSenderId: "521207359021",
-  appId: "1:521207359021:web:a4576aaa8039aa27f5baa4"
-};
-    // ======================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7sO4M3d2acWopSxaPRq36RiS8iiudTEI",
+      authDomain: "church-voting-43507.firebaseapp.com",
+      databaseURL: "https://church-voting-43507-default-rtdb.firebaseio.com",
+      projectId: "church-voting-43507",
+      storageBucket: "church-voting-43507.firebasestorage.app",
+      messagingSenderId: "521207359021",
+      appId: "1:521207359021:web:a4576aaa8039aa27f5baa4"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -266,18 +261,14 @@ const firebaseConfig = {
     function updateMotion() {
       const text = document.getElementById("newMotion").value.trim();
       if (!text) return alert("Please type a motion first.");
+
+      // Update the motion
       db.ref("motion").set(text);
-      document.getElementById("newMotion").value = "";
-      alert("Motion updated.");
-    }
 
-    function resetVotes() {
-      if (!confirm("Reset all votes for the next motion?")) return;
-
-      // Reset the counts
+      // Reset the vote counts
       db.ref("votes").set({ for: 0, against: 0 });
 
-      // Create a brand new session ID so phones allow voting again
+      // Create a new session so phones can vote again
       const newSession = Date.now().toString();
       db.ref("sessionId").set(newSession);
 
@@ -286,7 +277,8 @@ const firebaseConfig = {
       document.getElementById("results").classList.remove("visible");
       document.getElementById("showResultsBtn").textContent = "Show Results";
 
-      alert("Votes reset.\n\nMembers can now press the Refresh button to vote on the new motion.");
+      document.getElementById("newMotion").value = "";
+      alert("Motion updated and votes reset.\n\nMembers should press the Refresh button to vote on the new motion.");
     }
   </script>
 </body>

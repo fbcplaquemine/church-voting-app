@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FBCP Online Anonymous Voting</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 520px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 28px 24px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+      color: #2d3748;
+    }
+    .instructions {
+      font-size: 0.95rem;
+      color: #4a5568;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+    #motionTitle {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 12px 0 22px;
+      line-height: 1.4;
+      color: #1a365d;
+      min-height: 50px;
+    }
+    .mode-label {
+      display: inline-block;
+      background: #edf2f7;
+      color: #4a5568;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    .buttons {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    button.vote {
+      flex: 1;
+      padding: 22px 12px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+    }
+    button.vote:active { transform: scale(0.97); }
+    button.for { background: #38a169; }
+    button.against { background: #e53e3e; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .nominee-list {
+      text-align: left;
+      margin: 0 auto 20px;
+      max-width: 360px;
+    }
+    .nominee-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .nominee-item:hover { border-color: #a0aec0; }
+    .nominee-item.selected {
+      border-color: #3182ce;
+      background: #ebf8ff;
+    }
+    .nominee-item input {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      cursor: pointer;
+    }
+    .nominee-item label {
+      flex: 1;
+      font-size: 1.05rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .select-limit {
+      font-size: 0.95rem;
+      color: #4a5568;
+      margin-bottom: 14px;
+    }
+    .submit-vote-btn {
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 18px;
+      width: 100%;
+      max-width: 300px;
+    }
+    .submit-vote-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .refresh-btn {
+      background: #4a5568;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .counts {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .counts.visible { display: flex; }
+    .count-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #f7fafc;
+      border-radius: 8px;
+      font-size: 1.1rem;
+    }
+    .count-row.winner {
+      background: #c6f6d5;
+      border: 2px solid #38a169;
+      font-weight: 700;
+    }
+    .winner-badge {
+      background: #38a169;
+      color: white;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      margin-left: 8px;
+    }
+    .simple-counts {
+      display: flex;
+      justify-content: space-around;
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .count-for { color: #38a169; }
+    .count-against { color: #e53e3e; }
+    #status {
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      min-height: 28px;
+      color: #4a5568;
+    }
+    .admin-section {
+      margin-top: 28px;
+      padding-top: 22px;
+      border-top: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    .admin-section h3 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #718096;
+    }
+    input[type="password"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .admin-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .admin-buttons button {
+      width: 100%;
+      padding: 12px;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: white;
+    }
+    #showResultsBtn { background: #805ad5; }
+    #motionBtn { background: #3182ce; }
+    #electionBtn { background: #2f855a; }
+    .mode-switch {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .mode-switch label {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      background: #edf2f7;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .mode-switch input { display: none; }
+    .mode-switch input:checked + label {
+      background: #3182ce;
+      color: white;
+    }
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
+    .hidden { display: none; }
+    .small-note {
+      font-size: 0.8rem;
+      color: #718096;
+      margin-top: -6px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FBCP Online Anonymous Voting</h1>
+    <div class="instructions">
+      To Vote go to: <strong>fbcp.vercel.app</strong><br>
+      on your web browser (Safari / Chrome)
+    </div>
+
+    <div id="modeLabel" class="mode-label">Loading...</div>
+    <div id="motionTitle">Loading current motion...</div>
+
+    <!-- VERSION 1: Yes/No buttons -->
+    <div id="motionUI" class="hidden">
+      <div class="buttons">
+        <button class="vote for" id="forBtn" onclick="castMotionVote('for')">FOR</button>
+        <button class="vote against" id="againstBtn" onclick="castMotionVote('against')">AGAINST</button>
+      </div>
+    </div>
+
+    <!-- VERSION 2: Election checkboxes -->
+    <div id="electionUI" class="hidden">
+      <div class="select-limit" id="selectLimitText">You may select up to 0</div>
+      <div class="nominee-list" id="nomineeList"></div>
+      <button class="submit-vote-btn" id="submitElectionBtn" onclick="castElectionVote()">Submit My Votes</button>
+    </div>
+
+    <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+
+    <!-- Results area -->
+    <div class="counts" id="results"></div>
+
+    <div id="status"></div>
+
+    <!-- ADMIN SECTION -->
+    <div class="admin-section">
+      <h3>Admin (password protected)</h3>
+      <input type="password" id="adminPass" placeholder="Enter admin password" />
+
+      <div id="adminControls" class="hidden">
+        <button id="showResultsBtn" onclick="toggleResults()">Show Results</button>
+
+        <div style="margin: 18px 0 10px; font-weight: 600; color: #4a5568;">Choose Voting Mode</div>
+        <div class="mode-switch">
+          <input type="radio" name="adminMode" id="modeMotion" value="motion" checked>
+          <label for="modeMotion">Version 1<br>Yes / No Motion</label>
+
+          <input type="radio" name="adminMode" id="modeElection" value="election">
+          <label for="modeElection">Version 2<br>Committee Election</label>
+        </div>
+
+        <!-- Version 1 Admin Panel -->
+        <div id="motionAdmin" class="admin-panel active">
+          <textarea id="newMotion" rows="3" placeholder="Type the motion here..."></textarea>
+          <div class="admin-buttons">
+            <button id="motionBtn" onclick="updateMotion()">Update Motion & Reset Votes</button>
+          </div>
+        </div>
+
+        <!-- Version 2 Admin Panel -->
+        <div id="electionAdmin" class="admin-panel">
+          <label style="font-size:0.9rem; font-weight:600;">Number of people to elect (slots)</label>
+          <input type="number" id="slotsInput" min="1" max="10" value="4" />
+
+          <label style="font-size:0.9rem; font-weight:600;">Nominees (one name per line, max 10)</label>
+          <textarea id="nomineesInput" rows="8" placeholder="John Smith&#10;Jane Doe&#10;Bob Johnson&#10;..."></textarea>
+          <div class="small-note">Enter one name per line. Maximum 10 nominees.</div>
+
+          <div class="admin-buttons">
+            <button id="electionBtn" onclick="updateElection()">Start / Update Election & Reset Votes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7sO4M3d2acWopSxaPRq36RiS8iiudTEI",
+      authDomain: "church-voting-43507.firebaseapp.com",
+      databaseURL: "https://church-voting-43507-default-rtdb.firebaseio.com",
+      projectId: "church-voting-43507",
+      storageBucket: "church-voting-43507.firebasestorage.app",
+      messagingSenderId: "521207359021",
+      appId: "1:521207359021:web:a4576aaa8039aa27f5baa4"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const ADMIN_PASSWORD = "churchvote2026";
+    let resultsVisible = false;
+    let currentSession = null;
+    let currentMode = "motion";
+    let currentElection = null;
+
+    db.ref("mode").on("value", (snap) => {
+      currentMode = snap.val() || "motion";
+      updateUIForMode();
+    });
+
+    db.ref("title").on("value", (snap) => {
+      document.getElementById("motionTitle").textContent = snap.val() || "No item set yet";
+    });
+
+    db.ref("sessionId").on("value", (snap) => {
+      currentSession = snap.val() || "default";
+      checkIfAlreadyVoted();
+    });
+
+    db.ref("votes").on("value", (snap) => {
+      window.motionVotes = snap.val() || { for: 0, against: 0 };
+      if (resultsVisible && currentMode === "motion") renderResults();
+    });
+
+    db.ref("election").on("value", (snap) => {
+      currentElection = snap.val();
+      if (currentMode === "election") {
+        buildNomineeCheckboxes();
+        if (resultsVisible) renderResults();
+      }
+    });
+
+    function updateUIForMode() {
+      const modeLabel = document.getElementById("modeLabel");
+      const motionUI = document.getElementById("motionUI");
+      const electionUI = document.getElementById("electionUI");
+
+      if (currentMode === "election") {
+        modeLabel.textContent = "Version 2 – Committee Election";
+        motionUI.classList.add("hidden");
+        electionUI.classList.remove("hidden");
+        buildNomineeCheckboxes();
+      } else {
+        modeLabel.textContent = "Version 1 – Yes / No Motion";
+        motionUI.classList.remove("hidden");
+        electionUI.classList.add("hidden");
+      }
+      checkIfAlreadyVoted();
+      if (resultsVisible) renderResults();
+    }
+
+    function buildNomineeCheckboxes() {
+      const list = document.getElementById("nomineeList");
+      const limitText = document.getElementById("selectLimitText");
+      list.innerHTML = "";
+
+      if (!currentElection

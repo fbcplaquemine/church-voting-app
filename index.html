@@ -49,7 +49,7 @@
     .buttons {
       display: flex;
       gap: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
     button.vote {
       flex: 1;
@@ -68,6 +68,21 @@
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+    .qr-section {
+      margin: 10px 0 24px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+    }
+    .qr-section img {
+      width: 180px;
+      height: 180px;
+      border-radius: 12px;
+    }
+    .qr-label {
+      font-size: 0.9rem;
+      color: #4a5568;
+      margin-top: 10px;
     }
     .refresh-btn {
       background: #4a5568;
@@ -150,6 +165,12 @@
     <div class="buttons">
       <button class="vote for" id="forBtn" onclick="castVote('for')">FOR</button>
       <button class="vote against" id="againstBtn" onclick="castVote('against')">AGAINST</button>
+    </div>
+
+    <!-- QR Code Section -->
+    <div class="qr-section">
+      <img src="fbcpvote-qr.png" alt="Scan to vote" />
+      <div class="qr-label">Scan this QR code to open the voting page</div>
     </div>
 
     <button class="refresh-btn" onclick="location.reload()">Refresh</button>
